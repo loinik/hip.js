@@ -1,5 +1,6 @@
 import AR, { Rect } from '../../src/engine/AssetRenderer';
 import { Flags } from '../../src/engine/Flags';
+import { Scene } from '../../src/engine/Scene';
 import { loadScene } from '../../src/engine/SceneRegistry';
 
 export default function () {
@@ -20,12 +21,7 @@ export default function () {
       source: Rect(2, 2, 217, 214),
       onScreen: Rect(200, 188, 415, 400)
     }),
-    OnDown: function (this) {
-      // Brain.Senior_BR = false;
-      // Flags.Cellphone_Enable_Hints_FL = true;
-      // clickSFX: Restart();
-      // StartGameSC: Restart();
-    }
+    OnDown: () => { }
   });
 
   let seniorDiffButton = AR.Button({
@@ -38,11 +34,7 @@ export default function () {
       source: Rect(219, 2, 434, 214),
       onScreen: Rect(608, 188, 823, 400)
     }),
-    OnDown: function (this) {
-      // Brain.Senior_BR = true;
-      // clickSFX: Restart()
-      // StartGameSC: Restart()
-    }
+      OnDown: () => { }
   });
 
   let tutorialButton = AR.Button({
@@ -60,10 +52,7 @@ export default function () {
       source: Rect(295, 216, 390, 283),
       onScreen: Rect(466, 421, 561, 488)
     }),
-    OnUp: function (this) {
-      // Flags.TUT_FromBadges_FL = true;
-      // Scene.Change("TUT_Start_SC")
-    }
+    OnDown: () => { }
   })
 
 
@@ -85,7 +74,7 @@ export default function () {
       onScreen: Rect(466, 677, 562, 713)
     }),
     OnDown: () => {
-      loadScene('TitleMenu_SC');
+      Scene.Change('Main', 'TitleMenu_SC');
     }
   })
 }

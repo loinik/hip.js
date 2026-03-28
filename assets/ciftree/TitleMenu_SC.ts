@@ -1,16 +1,9 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// MID_MainMenu_SC.ts — скрипт сцены: главное меню
-//
-// Этот файл — лениво импортируется через SceneRegistry ('MID_MainMenu').
-// При импорте он сразу выполняется: заполняет AR состоянием сцены.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import AR, { Rect } from '../../src/engine/AssetRenderer';
+import { Scene } from '../../src/engine/Scene';
 import { loadScene } from '../../src/engine/SceneRegistry';
 
+
 export default function () {
-  // Очищаем предыдущую сцену (SceneRegistry тоже вызывает clear(), но пусть
-  // лучше дублируется — защита от прямого импорта модуля)
   AR.clear();
 
   AR.Summary({
@@ -52,7 +45,7 @@ export default function () {
       onScreen: Rect(43, 730, 169, 760)
     }),
     OnDown: () => {
-      loadScene('Badges_SC');
+      Scene.Change('Main', 'Badges_SC');
     }
   })
 
@@ -82,7 +75,7 @@ export default function () {
       onScreen: Rect(364, 730, 473, 760)
     }),
     OnDown: () => { }
-  })
+  });
   let optionsButton = AR.Button({
     hs: AR.Hotspot({
       onScreen: Rect(503, 730, 610, 760),

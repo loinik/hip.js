@@ -67,7 +67,7 @@ const CroppedImage = memo(function CroppedImage({
     initialW && initialH ? { w: initialW, h: initialH } : null
   );
 
-  // 2. Асинхронный пуленепробиваемый фикс для WEB
+  // 2. Асинхронный фикс для WEB
   useEffect(() => {
     if (hasCrop && !natSize && Platform.OS === 'web') {
       const uri = typeof imageSource === 'string'
@@ -84,7 +84,10 @@ const CroppedImage = memo(function CroppedImage({
 
   if (!hasCrop) {
     return (
-      <View style={{ position: 'absolute', left, top, width: scrW, height: scrH, zIndex, overflow: 'hidden' }} pointerEvents={pointerEvents}>
+      <View
+        style={{ position: 'absolute', left, top, width: scrW, height: scrH, zIndex, overflow: 'hidden' }}
+        pointerEvents={pointerEvents}
+      >
         <Image source={imageSource} style={{ width: scrW, height: scrH }} resizeMode="stretch" />
       </View>
     );
@@ -102,11 +105,14 @@ const CroppedImage = memo(function CroppedImage({
         position: 'absolute' as const,
         width: scrW,
         height: scrH,
-        opacity: 0 as const, // Скрываем до загрузки
+        opacity: 0 as const,
       };
 
   return (
-    <View style={{ position: 'absolute', left, top, width: scrW, height: scrH, zIndex, overflow: 'hidden' }} pointerEvents={pointerEvents}>
+    <View
+      style={{ position: 'absolute', left, top, width: scrW, height: scrH, zIndex, overflow: 'hidden' }}
+      pointerEvents={pointerEvents}
+    >
       <Image
         source={imageSource}
         style={imgStyle}
@@ -126,12 +132,18 @@ const CroppedImage = memo(function CroppedImage({
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SummaryLayer & OverlayLayer & MovieLayer
+// SummaryLayer
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SummaryLayer = memo(function SummaryLayer({ config }: { config: SummaryConfig }) {
-  return <Image source={resolveVideoAsset(config.bg)} style={styles.summary} resizeMode="contain" />;
+  return (
+    <Image source={resolveVideoAsset(config.bg)} style={styles.summary} resizeMode="contain" />
+  );
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OverlayLayer
+// ─────────────────────────────────────────────────────────────────────────────
 
 const OverlayLayer = memo(function OverlayLayer({ config }: { config: OverlayConfig }) {
   if (config.visible === false) return null;
@@ -147,6 +159,10 @@ const OverlayLayer = memo(function OverlayLayer({ config }: { config: OverlayCon
   );
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MovieLayer
+// ─────────────────────────────────────────────────────────────────────────────
+
 const MovieLayer = memo(function MovieLayer({ config }: { config: MovieConfig }) {
   const videoRef = useRef<Video>(null);
   const src  = resolveRect(config.source);
@@ -156,13 +172,25 @@ const MovieLayer = memo(function MovieLayer({ config }: { config: MovieConfig })
   const hasCrop = src.x1 !== 0 || src.y1 !== 0;
 
   return (
-    <View style={{ position: 'absolute', left: scr.x1, top: scr.y1, width: scrW, height: scrH, zIndex: config.z ?? 0, overflow: 'hidden' }} pointerEvents="none">
+    <View
+      style={{ position: 'absolute', left: scr.x1, top: scr.y1, width: scrW, height: scrH, zIndex: config.z ?? 0, overflow: 'hidden' }}
+      pointerEvents="none"
+    >
       <Video
-        ref={videoRef} source={resolveVideoAsset(config.movie)}
-        style={hasCrop ? { position: 'absolute', left: -src.x1, top: -src.y1, width: src.x2, height: src.y2 } : { width: scrW, height: scrH }}
-        resizeMode={ResizeMode.STRETCH} isLooping={config.loop ?? false} shouldPlay isMuted
+        ref={videoRef}
+        source={resolveVideoAsset(config.movie)}
+        style={hasCrop
+          ? { position: 'absolute', left: -src.x1, top: -src.y1, width: src.x2, height: src.y2 }
+          : { width: scrW, height: scrH }
+        }
+        resizeMode={ResizeMode.STRETCH}
+        isLooping={config.loop ?? false}
+        shouldPlay
+        isMuted
         onPlaybackStatusUpdate={(status) => {
-          if (config.pauseOnLastFrame && status.isLoaded && status.didJustFinish) videoRef.current?.pauseAsync();
+          if (config.pauseOnLastFrame && status.isLoaded && status.didJustFinish) {
+            videoRef.current?.pauseAsync();
+          }
         }}
       />
     </View>
@@ -170,12 +198,36 @@ const MovieLayer = memo(function MovieLayer({ config }: { config: MovieConfig })
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ButtonLayer — интерактивная кнопка
+// ButtonLayer
+//
+// Проблема: onHoverIn на вебе срабатывает при монтировании компонента,
+// если курсор уже находится над зоной кнопки (например, при смене сцены).
+// На главном меню кнопки узкие и внизу — почти не задевает.
+// На Badges кнопки огромные и по центру — курсор попадает почти всегда.
+//
+// Фикс: canHover ref. После монтирования ждём один requestAnimationFrame
+// (браузер успевает разослать начальные mouseover-события и они игнорируются),
+// затем разрешаем hover. Реальный mouseenter пользователя приходит уже после.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig }) {
   const [hovered, setHovered] = useState(false);
   const [pressed, setPressed] = useState(false);
+
+  // Guard: не разрешаем hover до первого rAF после монтирования.
+  // Это отсекает синтетический mouseover, который браузер шлёт при появлении
+  // элемента под уже стоящим курсором.
+  const canHover = useRef(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      canHover.current = true;
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      // Сбрасываем при анмаунте (смена сцены) — следующий mount начнёт заново
+      canHover.current = false;
+    };
+  }, []);
 
   const hs  = config.hs.onScreen;
   const hsL = hs.x1;
@@ -185,27 +237,6 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
 
   const hasDownOvl = !!config.downOvl;
 
-  // ── 🛡️ ПРЕДОХРАНИТЕЛЬ ОТ "ПРИЗРАЧНОГО ХОВЕРА" И ЗАЛИПАНИЯ СТЕЙТА ──────────
-  const canHoverRef = useRef(false);
-
-  useEffect(() => {
-    // 1. Принудительно сбрасываем стейт при монтировании или смене кнопки
-    setHovered(false);
-    setPressed(false);
-    
-    // 2. Блокируем hover в первые 100 мс. 
-    // Это игнорирует мышь, которая физически осталась на том же месте после прошлого клика.
-    canHoverRef.current = false;
-    const timer = setTimeout(() => {
-      canHoverRef.current = true;
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [config.id]); // Срабатывает каждый раз, когда меняется ID кнопки
-  // ────────────────────────────────────────────────────────────────────────
-
-  // ── Универсальная математика состояний (Web + Mobile) ─────────────────────
-  
   const showDownOvl = pressed && hasDownOvl;
   const showOverOvl = (hovered && !showDownOvl) || (pressed && !hasDownOvl);
 
@@ -236,7 +267,12 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
 
   return (
     <View
-      style={{ position: 'absolute', left: hsL, top: hsT, width: hsW, height: hsH, zIndex: config.z ?? 10, overflow: 'visible' }}
+      style={{
+        position: 'absolute',
+        left: hsL, top: hsT, width: hsW, height: hsH,
+        zIndex: config.z ?? 10,
+        overflow: 'visible',
+      }}
       pointerEvents="box-none"
     >
       {renderHsOvl()}
@@ -246,13 +282,14 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
       <Pressable
         style={[
           StyleSheet.absoluteFillObject,
-          Platform.OS === 'web' ? { cursor: config.hs.cursor ?? 'pointer' } as any : {}
+          Platform.OS === 'web' ? { cursor: config.hs.cursor ?? 'pointer' } as any : {},
         ]}
         onHoverIn={() => {
-          // Запускаем hover только если предохранитель отключен
-          if (canHoverRef.current) setHovered(true);
+          if (canHover.current) setHovered(true);
         }}
-        onHoverOut={() => setHovered(false)}
+        onHoverOut={() => {
+          setHovered(false);
+        }}
         onPressIn={() => {
           setPressed(true);
           config.OnDown?.();
@@ -270,11 +307,23 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
 // SceneRenderer — корневой компонент
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SceneRenderer — корневой компонент
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const SceneRenderer = memo(function SceneRenderer() {
   const { summary, overlays, movies, buttons } = useAssetRenderer();
 
+  const buttonOvlIds = new Set<string>();
+  buttons.forEach((b) => {
+    if (b.overOvl) buttonOvlIds.add(b.overOvl.id);
+    if (b.downOvl) buttonOvlIds.add(b.downOvl.id);
+  });
+
+  const standaloneOverlays = overlays.filter((o) => !buttonOvlIds.has(o.id));
+
   const sortedMovies   = [...movies  ].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
-  const sortedOverlays = [...overlays].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+  const sortedOverlays = [...standaloneOverlays].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
 
   return (
     <View style={styles.root} pointerEvents="box-none">
@@ -285,6 +334,8 @@ export const SceneRenderer = memo(function SceneRenderer() {
     </View>
   );
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
