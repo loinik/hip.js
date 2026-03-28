@@ -27,7 +27,7 @@
       "favicon": "./assets/favicon.png"
     },
     "experiments": {
-      "baseUrl": "/hip.js/"
+      "baseUrl": "/hip.js"
     }
   }
 }
