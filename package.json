@@ -23,5 +23,6 @@
     "gh-pages": "^6.3.0",
     "typescript": "~5.9.2"
   },
+  "homepage": "https://loinik.github.io/hip.js/",
   "private": true
 }
