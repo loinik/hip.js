@@ -21,7 +21,7 @@ export type AssetSource = ReturnType<typeof require>;
 // Ключ = значение поля bg в AR.Summary() — без расширения файла
 
 const videoAssets: Record<string, AssetSource> = {
-  MID_MainMenu_BG: require('../../assets/video/MID_MainMenu_BG.png'),
+  GTH_MainMenu_BG: require('../../assets/video/GTH_MainMenu_BG.png'),
   UI_Difficulty_BG: require('../../assets/video/UI_Difficulty_BG.png'),
   toast_BG: require('../../assets/video/toast_BG.jpg'),
   // Добавляй новые фоны здесь:
@@ -34,7 +34,7 @@ const videoAssets: Record<string, AssetSource> = {
 const ciftreeAssets: Record<string, AssetSource> = {
   'UI_MainMenuTitleND_OVL': require('../../assets/ciftree/UI_MainMenuTitleND_OVL.png'),
   'UI_MainMenuTitleND_OVL_2x': require('../../assets/ciftree/UI_MainMenuTitleND_OVL_2x.png'),
-  'MID_MainMenuTitle_OVL': require('../../assets/ciftree/MID_MainMenuTitle_OVL.png'),
+  'GTH_MainMenuTitle_OVL': require('../../assets/ciftree/GTH_MainMenuTitle_OVL.png'),
   'UI_MainMenu_OVL': require('../../assets/ciftree/UI_MainMenu_OVL.png'),
   'UI_MainMenu_Rollover_OVL': require('../../assets/ciftree/UI_MainMenu_Rollover_OVL.png'),
   'UI_Difficulty_OVL': require('../../assets/ciftree/UI_Difficulty_OVL.png'),

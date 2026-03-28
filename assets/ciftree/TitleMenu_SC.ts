@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import AR, { Rect } from '../../src/engine/AssetRenderer';
 import { Scene } from '../../src/engine/Scene';
 import { loadScene } from '../../src/engine/SceneRegistry';
@@ -9,28 +10,30 @@ export default function () {
   AR.Summary({
     id: 'sum',
     env: 'UI',
-    bg: 'MID_MainMenu_BG',
+    bg: 'GTH_MainMenu_BG',
   });
 
   let nancyDrewOVL = AR.Overlay({
     ovl: 'UI_MainMenuTitleND_OVL_2x',
     source: Rect(0, 0, 808, 366),
     onScreen: Rect(108, 83, 916, 449),
-    z: 4,
     resolution: 2,
+    z: 4
   });
 
   let titleOVL = AR.Overlay({
-    ovl: 'MID_MainMenuTitle_OVL',
+    ovl: 'GTH_MainMenuTitle_OVL',
     source: Rect(0, 0, 808, 366),
     onScreen: Rect(108, 83, 916, 449),
-    z: 5,
+    resolution: 2,
+    z: 5
   });
 
   let mainMenuOVL = AR.Overlay({
     ovl: 'UI_MainMenu_OVL',
     source: Rect(0, 0, 1024, 96),
     onScreen: Rect(0, 674, 1024, 768),
+    resolution: 2,
     z: 6,
   });
 
@@ -115,7 +118,7 @@ export default function () {
     OnDown: () => { }
   })
 
-  let quitButton = AR.Button({
+  let quitButton = Platform.OS === 'web' && AR.Button({
     hs: AR.Hotspot({
       onScreen: Rect(890, 730, 1006, 760),
       cursor: "MenuHot"

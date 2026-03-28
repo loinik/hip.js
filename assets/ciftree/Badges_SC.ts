@@ -53,10 +53,7 @@ export default function () {
       onScreen: Rect(466, 421, 561, 488)
     }),
     OnDown: () => { }
-  })
-
-
-
+  });
 
   let cancelButton = AR.Button({
     hs: AR.Hotspot({
@@ -76,5 +73,5 @@ export default function () {
     OnDown: () => {
       Scene.Change('Main', 'TitleMenu_SC');
     }
-  })
+  });
 }
