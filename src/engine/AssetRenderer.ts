@@ -203,7 +203,7 @@ class AssetRendererClass {
       // Заглушка OnDown: Alert до тех пор, пока не прописан реальный обработчик
       OnDown: () => {
         // React Native Alert — работает и на вебе (через window.alert), и на мобильном
-        if (typeof alert !== 'undefined') alert(`[AR] Button pressed: ${full?.id ?? 'btn'}`);
+        // if (typeof alert !== 'undefined') alert(`[AR] Button pressed: ${full?.id ?? 'btn'}`);
       },
       ...config,
     };

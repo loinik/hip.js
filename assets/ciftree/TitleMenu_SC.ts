@@ -27,10 +27,10 @@ export default function () {
     z: 5,
   });
 
-  let textOVL = AR.Overlay({
+  let mainMenuOVL = AR.Overlay({
     ovl: 'UI_MainMenu_OVL',
     source: Rect(0, 0, 1024, 96),
-    onScreen: Rect(0, 672, 1024, 768),
+    onScreen: Rect(0, 674, 1024, 768),
     z: 6,
   });
 

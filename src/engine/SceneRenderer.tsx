@@ -19,7 +19,7 @@ import type {
   ViewportSize,
 } from './AssetRenderer';
 
-const UI_WIDTH  = 1024;
+const UI_WIDTH = 1024;
 const UI_HEIGHT = 768;
 
 function resolveRect(r: RectData | ViewportSize): RectData {
@@ -43,6 +43,7 @@ type CroppedImageProps = {
   zIndex?: number;
   resolution?: 1 | 2;
   pointerEvents?: 'none' | 'box-none' | 'auto';
+  opacity?: number;
 };
 
 const CroppedImage = memo(function CroppedImage({
@@ -55,10 +56,11 @@ const CroppedImage = memo(function CroppedImage({
   zIndex = 0,
   resolution = 1,
   pointerEvents = 'none',
+  opacity = 1, // <--- Принимаем целевой opacity (1 = видно, 0 = ховер выключен)
 }: CroppedImageProps) {
-  const hasCrop = src.x1 !== 0 || src.y1 !== 0;
+  // ПРАВИЛЬНЫЙ КРОП: Если не равно всему экрану, это кроп.
+  const hasCrop = src.x1 !== 0 || src.y1 !== 0 || src.x2 !== UI_WIDTH || src.y2 !== UI_HEIGHT;
 
-  // 1. Синхронная попытка (если сборщик отдал размеры файла)
   const sourceObj = imageSource as any;
   const initialW = sourceObj?.width;
   const initialH = sourceObj?.height;
@@ -67,7 +69,6 @@ const CroppedImage = memo(function CroppedImage({
     initialW && initialH ? { w: initialW, h: initialH } : null
   );
 
-  // 2. Асинхронный фикс для WEB
   useEffect(() => {
     if (hasCrop && !natSize && Platform.OS === 'web') {
       const uri = typeof imageSource === 'string'
@@ -82,43 +83,52 @@ const CroppedImage = memo(function CroppedImage({
     }
   }, [hasCrop, natSize, imageSource, sourceObj]);
 
+  // Контейнер всегда имеет opacity: 1, он просто держит границы
+  const containerStyle = {
+    position: 'absolute' as const,
+    left,
+    top,
+    width: scrW,
+    height: scrH,
+    zIndex,
+    overflow: 'hidden' as const,
+  };
+
   if (!hasCrop) {
     return (
-      <View
-        style={{ position: 'absolute', left, top, width: scrW, height: scrH, zIndex, overflow: 'hidden' }}
-        pointerEvents={pointerEvents}
-      >
-        <Image source={imageSource} style={{ width: scrW, height: scrH }} resizeMode="stretch" />
+      <View style={containerStyle} pointerEvents={pointerEvents}>
+        {/* Прячем саму картинку, если opacity = 0 */}
+        <Image source={imageSource} style={{ width: scrW, height: scrH, opacity }} resizeMode="stretch" />
       </View>
     );
   }
 
+  // Если кроп есть:
+  // Если не загружено -> opacity 0 (прячем до загрузки).
+  // Если загружено -> ставим целевой opacity (0 или 1 в зависимости от ховера).
   const imgStyle = natSize
     ? {
         position: 'absolute' as const,
-        left:   -src.x1 / resolution,
-        top:    -src.y1 / resolution,
-        width:   natSize.w / resolution,
-        height:  natSize.h / resolution,
+        left: -(src.x1 / resolution),
+        top: -(src.y1 / resolution),
+        width: natSize.w / resolution,
+        height: natSize.h / resolution,
+        opacity: opacity, // <--- Применяем целевой opacity сюда!
       }
     : {
         position: 'absolute' as const,
         width: scrW,
         height: scrH,
-        opacity: 0 as const,
+        opacity: 0 as const, // Прячем до загрузки
       };
 
   return (
-    <View
-      style={{ position: 'absolute', left, top, width: scrW, height: scrH, zIndex, overflow: 'hidden' }}
-      pointerEvents={pointerEvents}
-    >
+    <View style={containerStyle} pointerEvents={pointerEvents}>
       <Image
         source={imageSource}
         style={imgStyle}
         resizeMode="stretch"
         onLoad={(e) => {
-          // 3. Асинхронный фикс для MOBILE
           if (Platform.OS !== 'web' && !natSize) {
             const source = (e.nativeEvent as any).source;
             if (source?.width && source?.height) {
@@ -165,8 +175,8 @@ const OverlayLayer = memo(function OverlayLayer({ config }: { config: OverlayCon
 
 const MovieLayer = memo(function MovieLayer({ config }: { config: MovieConfig }) {
   const videoRef = useRef<Video>(null);
-  const src  = resolveRect(config.source);
-  const scr  = resolveRect(config.onScreen);
+  const src = resolveRect(config.source);
+  const scr = resolveRect(config.onScreen);
   const scrW = rW(scr);
   const scrH = rH(scr);
   const hasCrop = src.x1 !== 0 || src.y1 !== 0;
@@ -229,7 +239,7 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
     };
   }, []);
 
-  const hs  = config.hs.onScreen;
+  const hs = config.hs.onScreen;
   const hsL = hs.x1;
   const hsT = hs.y1;
   const hsW = rW(hs);
@@ -240,7 +250,7 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
   const showDownOvl = pressed && hasDownOvl;
   const showOverOvl = (hovered && !showDownOvl) || (pressed && !hasDownOvl);
 
-  const renderOvl = (ovl: ButtonConfig['overOvl'] | ButtonConfig['downOvl']) => {
+  const renderOvl = (ovl: ButtonConfig['overOvl'] | ButtonConfig['downOvl'], isVisible: boolean) => {
     if (!ovl) return null;
     const src = resolveRect(ovl.source);
     const scr = resolveRect(ovl.onScreen);
@@ -250,6 +260,7 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
         src={src} scrW={rW(scr)} scrH={rH(scr)}
         left={scr.x1 - hsL} top={scr.y1 - hsT}
         resolution={ovl.resolution ?? 1} pointerEvents="none"
+        opacity={isVisible ? 1 : 0} // <--- Прячем, если неактивно, но НЕ удаляем из DOM!
       />
     );
   };
@@ -266,18 +277,10 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
   };
 
   return (
-    <View
-      style={{
-        position: 'absolute',
-        left: hsL, top: hsT, width: hsW, height: hsH,
-        zIndex: config.z ?? 10,
-        overflow: 'visible',
-      }}
-      pointerEvents="box-none"
-    >
+    <View style={{ position: 'absolute', left: hsL, top: hsT, width: hsW, height: hsH, zIndex: config.z ?? 10, overflow: 'visible' }} pointerEvents="box-none">
       {renderHsOvl()}
-      {showOverOvl && renderOvl(config.overOvl)}
-      {showDownOvl && renderOvl(config.downOvl)}
+      {renderOvl(config.overOvl, showOverOvl)}
+      {renderOvl(config.downOvl, showDownOvl)}
 
       <Pressable
         style={[
@@ -322,7 +325,7 @@ export const SceneRenderer = memo(function SceneRenderer() {
 
   const standaloneOverlays = overlays.filter((o) => !buttonOvlIds.has(o.id));
 
-  const sortedMovies   = [...movies  ].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+  const sortedMovies = [...movies].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
   const sortedOverlays = [...standaloneOverlays].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
 
   return (
@@ -338,6 +341,10 @@ export const SceneRenderer = memo(function SceneRenderer() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  root: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
   summary: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
 });
