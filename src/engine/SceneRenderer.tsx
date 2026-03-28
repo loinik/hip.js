@@ -185,14 +185,28 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
 
   const hasDownOvl = !!config.downOvl;
 
+  // ── 🛡️ ПРЕДОХРАНИТЕЛЬ ОТ "ПРИЗРАЧНОГО ХОВЕРА" И ЗАЛИПАНИЯ СТЕЙТА ──────────
+  const canHoverRef = useRef(false);
+
+  useEffect(() => {
+    // 1. Принудительно сбрасываем стейт при монтировании или смене кнопки
+    setHovered(false);
+    setPressed(false);
+    
+    // 2. Блокируем hover в первые 100 мс. 
+    // Это игнорирует мышь, которая физически осталась на том же месте после прошлого клика.
+    canHoverRef.current = false;
+    const timer = setTimeout(() => {
+      canHoverRef.current = true;
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [config.id]); // Срабатывает каждый раз, когда меняется ID кнопки
+  // ────────────────────────────────────────────────────────────────────────
+
   // ── Универсальная математика состояний (Web + Mobile) ─────────────────────
   
-  // downOvl показываем только если кнопка физически нажата и слой задан
   const showDownOvl = pressed && hasDownOvl;
-  
-  // overOvl показываем:
-  // 1. При наведении на вебе (и если он прямо сейчас не перекрыт нажатым downOvl)
-  // 2. Либо при нажатии (на любой платформе), если downOvl не существует в конфиге
   const showOverOvl = (hovered && !showDownOvl) || (pressed && !hasDownOvl);
 
   const renderOvl = (ovl: ButtonConfig['overOvl'] | ButtonConfig['downOvl']) => {
@@ -221,8 +235,6 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
   };
 
   return (
-    // pointerEvents="box-none" гарантирует, что сам View не крадет тапы, 
-    // пропуская их точно к Pressable.
     <View
       style={{ position: 'absolute', left: hsL, top: hsT, width: hsW, height: hsH, zIndex: config.z ?? 10, overflow: 'visible' }}
       pointerEvents="box-none"
@@ -234,11 +246,12 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
       <Pressable
         style={[
           StyleSheet.absoluteFillObject,
-          // Курсор применяем только на вебе, чтобы TS и React Native не ругались
           Platform.OS === 'web' ? { cursor: config.hs.cursor ?? 'pointer' } as any : {}
         ]}
-        // Эти пропсы официально поддерживаются в React Native для web-ховеров
-        onHoverIn={() => setHovered(true)}
+        onHoverIn={() => {
+          // Запускаем hover только если предохранитель отключен
+          if (canHoverRef.current) setHovered(true);
+        }}
         onHoverOut={() => setHovered(false)}
         onPressIn={() => {
           setPressed(true);

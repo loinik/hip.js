@@ -60,7 +60,7 @@ export default function () {
       source: Rect(295, 216, 390, 283),
       onScreen: Rect(466, 421, 561, 488)
     }),
-    OnUp: function () {
+    OnUp: function (this) {
       // Flags.TUT_FromBadges_FL = true;
       // Scene.Change("TUT_Start_SC")
     }
