@@ -29,10 +29,6 @@ function resolveRect(r: RectData | ViewportSize): RectData {
 const rW = (r: RectData) => r.x2 - r.x1;
 const rH = (r: RectData) => r.y2 - r.y1;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CroppedImage
-// ─────────────────────────────────────────────────────────────────────────────
-
 type CroppedImageProps = {
   imageSource: ReturnType<typeof resolveCiftreeAsset>;
   src: RectData;
@@ -56,9 +52,8 @@ const CroppedImage = memo(function CroppedImage({
   zIndex = 0,
   resolution = 1,
   pointerEvents = 'none',
-  opacity = 1, // <--- Принимаем целевой opacity (1 = видно, 0 = ховер выключен)
+  opacity = 1,
 }: CroppedImageProps) {
-  // ПРАВИЛЬНЫЙ КРОП: Если не равно всему экрану, это кроп.
   const hasCrop = src.x1 !== 0 || src.y1 !== 0 || src.x2 !== UI_WIDTH || src.y2 !== UI_HEIGHT;
 
   const sourceObj = imageSource as any;
@@ -83,7 +78,6 @@ const CroppedImage = memo(function CroppedImage({
     }
   }, [hasCrop, natSize, imageSource, sourceObj]);
 
-  // Контейнер всегда имеет opacity: 1, он просто держит границы
   const containerStyle = {
     position: 'absolute' as const,
     left,
@@ -97,15 +91,11 @@ const CroppedImage = memo(function CroppedImage({
   if (!hasCrop) {
     return (
       <View style={containerStyle} pointerEvents={pointerEvents}>
-        {/* Прячем саму картинку, если opacity = 0 */}
         <Image source={imageSource} style={{ width: scrW, height: scrH, opacity }} resizeMode="stretch" />
       </View>
     );
   }
 
-  // Если кроп есть:
-  // Если не загружено -> opacity 0 (прячем до загрузки).
-  // Если загружено -> ставим целевой opacity (0 или 1 в зависимости от ховера).
   const imgStyle = natSize
     ? {
         position: 'absolute' as const,
@@ -113,13 +103,13 @@ const CroppedImage = memo(function CroppedImage({
         top: -(src.y1 / resolution),
         width: natSize.w / resolution,
         height: natSize.h / resolution,
-        opacity: opacity, // <--- Применяем целевой opacity сюда!
+        opacity: opacity,
       }
     : {
         position: 'absolute' as const,
         width: scrW,
         height: scrH,
-        opacity: 0 as const, // Прячем до загрузки
+        opacity: 0 as const,
       };
 
   return (
@@ -141,19 +131,11 @@ const CroppedImage = memo(function CroppedImage({
   );
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SummaryLayer
-// ─────────────────────────────────────────────────────────────────────────────
-
 const SummaryLayer = memo(function SummaryLayer({ config }: { config: SummaryConfig }) {
   return (
     <Image source={resolveVideoAsset(config.bg)} style={styles.summary} resizeMode="contain" />
   );
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OverlayLayer
-// ─────────────────────────────────────────────────────────────────────────────
 
 const OverlayLayer = memo(function OverlayLayer({ config }: { config: OverlayConfig }) {
   if (config.visible === false) return null;
@@ -168,10 +150,6 @@ const OverlayLayer = memo(function OverlayLayer({ config }: { config: OverlayCon
     />
   );
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MovieLayer
-// ─────────────────────────────────────────────────────────────────────────────
 
 const MovieLayer = memo(function MovieLayer({ config }: { config: MovieConfig }) {
   const videoRef = useRef<Video>(null);
@@ -207,26 +185,10 @@ const MovieLayer = memo(function MovieLayer({ config }: { config: MovieConfig })
   );
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ButtonLayer
-//
-// Проблема: onHoverIn на вебе срабатывает при монтировании компонента,
-// если курсор уже находится над зоной кнопки (например, при смене сцены).
-// На главном меню кнопки узкие и внизу — почти не задевает.
-// На Badges кнопки огромные и по центру — курсор попадает почти всегда.
-//
-// Фикс: canHover ref. После монтирования ждём один requestAnimationFrame
-// (браузер успевает разослать начальные mouseover-события и они игнорируются),
-// затем разрешаем hover. Реальный mouseenter пользователя приходит уже после.
-// ─────────────────────────────────────────────────────────────────────────────
-
 const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig }) {
   const [hovered, setHovered] = useState(false);
   const [pressed, setPressed] = useState(false);
 
-  // Guard: не разрешаем hover до первого rAF после монтирования.
-  // Это отсекает синтетический mouseover, который браузер шлёт при появлении
-  // элемента под уже стоящим курсором.
   const canHover = useRef(false);
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
@@ -234,7 +196,6 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
     });
     return () => {
       cancelAnimationFrame(raf);
-      // Сбрасываем при анмаунте (смена сцены) — следующий mount начнёт заново
       canHover.current = false;
     };
   }, []);
@@ -260,7 +221,7 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
         src={src} scrW={rW(scr)} scrH={rH(scr)}
         left={scr.x1 - hsL} top={scr.y1 - hsT}
         resolution={ovl.resolution ?? 1} pointerEvents="none"
-        opacity={isVisible ? 1 : 0} // <--- Прячем, если неактивно, но НЕ удаляем из DOM!
+        opacity={isVisible ? 1 : 0}
       />
     );
   };
@@ -279,6 +240,8 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
   return (
     <View style={{ position: 'absolute', left: hsL, top: hsT, width: hsW, height: hsH, zIndex: config.z ?? 10, overflow: 'visible' }} pointerEvents="box-none">
       {renderHsOvl()}
+      {/* baseOvl: всегда виден, независимо от состояния hover/press */}
+      {config.baseOvl && renderOvl(config.baseOvl, true)}
       {renderOvl(config.overOvl, showOverOvl)}
       {renderOvl(config.downOvl, showDownOvl)}
 
@@ -306,39 +269,46 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
   );
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SceneRenderer — корневой компонент
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SceneRenderer — корневой компонент
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const SceneRenderer = memo(function SceneRenderer() {
-  const { summary, overlays, movies, buttons } = useAssetRenderer();
+  const { summary, overlays, movies, buttons, fillRects } = useAssetRenderer();
 
   const buttonOvlIds = new Set<string>();
   buttons.forEach((b) => {
     if (b.overOvl) buttonOvlIds.add(b.overOvl.id);
     if (b.downOvl) buttonOvlIds.add(b.downOvl.id);
+    if (b.baseOvl) buttonOvlIds.add(b.baseOvl.id);
   });
 
   const standaloneOverlays = overlays.filter((o) => !buttonOvlIds.has(o.id));
 
-  const sortedMovies = [...movies].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
-  const sortedOverlays = [...standaloneOverlays].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+  const sortedMovies    = [...movies          ].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+  const sortedOverlays  = [...standaloneOverlays].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+  const sortedFillRects = [...(fillRects ?? [])].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
 
   return (
     <View style={styles.root} pointerEvents="box-none">
       {summary && <SummaryLayer config={summary} />}
       {sortedMovies.map((m) => <MovieLayer key={m.id} config={m} />)}
       {sortedOverlays.map((o) => <OverlayLayer key={o.id} config={o} />)}
+      {sortedFillRects.map((f) => {
+        const scr = resolveRect(f.onScreen);
+        const style = {
+          position: 'absolute' as const,
+          left:   scr.x1,
+          top:    scr.y1,
+          width:  rW(scr),
+          height: rH(scr),
+          zIndex: f.z ?? 0,
+          backgroundColor: `rgba(${f.r},${f.g},${f.b},${(f.a / 255).toFixed(3)})`,
+        };
+        return f.blockInput
+          ? <Pressable key={f.id} style={style} onPress={() => {}} />
+          : <View key={f.id} style={style} pointerEvents="none" />;
+      })}
       {buttons.map((b) => <ButtonLayer key={b.id} config={b} />)}
     </View>
   );
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   root: {

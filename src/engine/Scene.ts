@@ -19,6 +19,7 @@ import { loadScene } from './SceneRegistry';
 
 class SceneClass {
   private _streamName: string = 'Main';
+  private _previousScene: string | null = null;
 
   /** Имя текущего стрима (аналог Scene.streamName в Lua) */
   get streamName(): string {
@@ -31,26 +32,61 @@ class SceneClass {
    * Два варианта вызова:
    *   Scene.Change('TitleMenu_SC')
    *   Scene.Change(Scene.streamName, 'Badges_SC')
-   *
-   * Переход откладывается через setTimeout(0), чтобы текущий скрипт сцены
-   * успел завершить выполнение до начала загрузки новой сцены.
    */
   Change(streamOrScene: string, sceneId?: string): void {
     let targetScene: string;
 
     if (sceneId !== undefined) {
-      // Scene.Change(streamName, sceneId)
       this._streamName = streamOrScene;
       targetScene = sceneId;
     } else {
-      // Scene.Change(sceneId) — стрим не меняем
       targetScene = streamOrScene;
     }
 
-    // Откладываем: текущий модуль должен закончить до AR.clear() следующей сцены
     setTimeout(() => {
       loadScene(targetScene).catch((err) => {
         console.error(`[Scene] Ошибка перехода на "${targetScene}":`, err);
+      });
+    }, 0);
+  }
+
+  /**
+   * Открыть попап-сцену поверх текущей (без AR.clear()).
+   * Аналог Scene:BeginStream в оригинале.
+   *
+   * Сохраняет текущую сцену — она перезагрузится при EndStream.
+   * Скрипт попапа сам НЕ вызывает AR.clear(), только добавляет элементы.
+   */
+  BeginStream({ stream, scene }: { stream: string; scene: string; captureInput?: boolean }): void {
+    const { getCurrentScene } = require('./SceneRegistry');
+    this._previousScene = getCurrentScene();
+    this._streamName = stream;
+
+    setTimeout(() => {
+      loadScene(scene).catch((err) => {
+        console.error(`[Scene] Ошибка BeginStream "${scene}":`, err);
+      });
+    }, 0);
+  }
+
+  /**
+   * Закрыть попап и вернуться к предыдущей сцене.
+   * Аналог Scene:EndStream в оригинале.
+   *
+   * Перезагружает предыдущую сцену — та вызывает AR.clear() и пересобирает себя.
+   */
+  EndStream(streamName?: string): void {
+    const target = this._previousScene;
+    this._previousScene = null;
+
+    if (!target) {
+      console.warn('[Scene] EndStream: нет предыдущей сцены для возврата');
+      return;
+    }
+
+    setTimeout(() => {
+      loadScene(target).catch((err) => {
+        console.error(`[Scene] Ошибка EndStream возврата на "${target}":`, err);
       });
     }, 0);
   }

@@ -38,6 +38,7 @@ const ciftreeAssets: Record<string, AssetSource> = {
   'UI_MainMenu_OVL': require('../../assets/ciftree/UI_MainMenu_OVL.png'),
   'UI_MainMenu_Rollover_OVL': require('../../assets/ciftree/UI_MainMenu_Rollover_OVL.png'),
   'UI_Difficulty_OVL': require('../../assets/ciftree/UI_Difficulty_OVL.png'),
+  'UI_MainExtras_OVL': require('../../assets/ciftree/UI_MainExtras_OVL.png'),
   // Добавляй новые оверлеи здесь:
   // 'EXAMPLE_OVL.png': require('../../assets/ciftree/EXAMPLE_OVL.png'),
 };

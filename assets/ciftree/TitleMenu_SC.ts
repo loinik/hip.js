@@ -102,7 +102,9 @@ export default function () {
       source: Rect(2, 130, 109, 160),
       onScreen: Rect(635, 730, 742, 760)
     }),
-    OnDown: () => { }
+    OnDown: () => {
+      Scene.BeginStream({ stream: 'MainMenuPopup', scene: 'UI_Extras_SC' });
+    }
   })
 
   let moreNDButton = AR.Button({

@@ -70,7 +70,7 @@ export default function () {
       source: Rect(2, 216, 98, 252),
       onScreen: Rect(466, 677, 562, 713)
     }),
-    OnDown: () => {
+    OnUp: () => {
       Scene.Change('Main', 'TitleMenu_SC');
     }
   });

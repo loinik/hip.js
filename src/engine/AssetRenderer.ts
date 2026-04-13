@@ -96,10 +96,35 @@ export type ButtonConfig = {
    * На вебе downOvl показывается поверх overOvl при mousedown.
    */
   downOvl?: OverlayConfig;
+  /**
+   * Базовый спрайт кнопки — всегда виден, независимо от состояния.
+   * Аналог baseOvl в оригинальном движке.
+   */
+  baseOvl?: OverlayConfig;
   /** Срабатывает при нажатии (onPressIn / mousedown) */
   OnDown?: () => void;
   /** Срабатывает при отпускании (onPressOut / mouseup) */
   OnUp?: () => void;
+  z?: number;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Закрашенный прямоугольник — аналог AR:Override { Render = DrawRect } в оригинале.
+ * Используется для полупрозрачных затемнений, попапов и т.п.
+ * Цвет: r,g,b,a — каждый 0..255.
+ */
+export type FillRectConfig = {
+  id: string;
+  r: number;
+  g: number;
+  b: number;
+  /** Прозрачность 0..255 (255 = полностью непрозрачный) */
+  a: number;
+  onScreen: RectData | ViewportSize;
+  /** Блокировать тапы/клики под собой */
+  blockInput?: boolean;
   z?: number;
 };
 
@@ -110,6 +135,7 @@ export type SceneState = {
   overlays: OverlayConfig[];
   movies: MovieConfig[];
   buttons: ButtonConfig[];
+  fillRects: FillRectConfig[];
 };
 
 type Listener = (state: SceneState) => void;
@@ -122,6 +148,7 @@ class AssetRendererClass {
     overlays: [],
     movies: [],
     buttons: [],
+    fillRects: [],
   };
   private _listeners = new Set<Listener>();
   private _seq = 0;
@@ -141,6 +168,7 @@ class AssetRendererClass {
       overlays: [...this._state.overlays],
       movies: [...this._state.movies],
       buttons: [...this._state.buttons],
+      fillRects: [...this._state.fillRects],
     };
   }
 
@@ -150,7 +178,7 @@ class AssetRendererClass {
   }
 
   clear(): void {
-    this._state = { summary: null, overlays: [], movies: [], buttons: [] };
+    this._state = { summary: null, overlays: [], movies: [], buttons: [], fillRects: [] };
     this.emit();
   }
 
@@ -231,6 +259,21 @@ class AssetRendererClass {
       overlays: this._state.overlays.filter((o) => o.id !== id),
     };
     this.emit();
+  }
+
+  /**
+   * Закрашенный прямоугольник (затемнение, оверлей попапа).
+   * Аналог AR:Override { Render = function() this:DrawRect(rect, color) }
+   */
+  FillRect(config: Omit<FillRectConfig, 'id'> & { id?: string }): FillRectConfig {
+    const full: FillRectConfig = { id: this.nextId('fill'), ...config };
+    const idx = this._state.fillRects.findIndex((f) => f.id === full.id);
+    const fillRects = [...this._state.fillRects];
+    if (idx >= 0) fillRects[idx] = full;
+    else fillRects.push(full);
+    this._state = { ...this._state, fillRects };
+    this.emit();
+    return full;
   }
 }
 

@@ -26,6 +26,7 @@ const SCENE_MAP: Record<string, SceneLoader> = {
   s0: () => import('../../assets/ciftree/s0'),
   TitleMenu_SC: () => import('../../assets/ciftree/TitleMenu_SC'),
   Badges_SC: () => import('../../assets/ciftree/Badges_SC'),
+  UI_Extras_SC: () => import('../../assets/ciftree/UI_Extras_SC'),
   // Добавляй новые сцены здесь:
 };
 
