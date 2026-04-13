@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Dimensions, Platform, StatusBar } from 'react-native';
 import { SceneRenderer } from './src/engine/SceneRenderer';
 import { loadScene } from './src/engine/SceneRegistry';
+import { startGameLoop, stopGameLoop } from './src/engine/GameLoop';
 
 // ── Константы ─────────────────────────────────────────────────────────────────
 
@@ -70,13 +71,15 @@ export default function Game() {
   // ── Загрузка стартовой сцены ───────────────────────────────────────────────
 
   useEffect(() => {
+    startGameLoop();
     loadScene(INITIAL_SCENE)
       .then(() => setSceneReady(true))
       .catch((err) => {
         console.error('[Game] Ошибка загрузки сцены:', err);
         setSceneError(err?.message ?? String(err));
-        setSceneReady(true); // всё равно рендерим (пустой экран лучше зависания)
+        setSceneReady(true);
       });
+    return () => stopGameLoop();
   }, []);
 
   // ── Рендер ────────────────────────────────────────────────────────────────

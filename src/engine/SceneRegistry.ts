@@ -57,6 +57,8 @@ export async function loadScene(id: string): Promise<void> {
 
   if (typeof mod.default === 'function') {
     mod.default();
+    // Оценить dynamic active-условия теперь, когда все ноды сцены созданы
+    AR._evaluateAll();
   } else if (__DEV__) {
     console.warn(
       `[SceneRegistry] Сцена "${id}" не экспортирует default-функцию.\n` +

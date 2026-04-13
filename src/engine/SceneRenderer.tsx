@@ -12,6 +12,7 @@ import { resolveVideoAsset, resolveCiftreeAsset, resolveCiftreeKey } from './Ass
 import { useAssetRenderer } from './useAssetRenderer';
 import type {
   ButtonConfig,
+  FillRectConfig,
   MovieConfig,
   OverlayConfig,
   RectData,
@@ -138,7 +139,7 @@ const SummaryLayer = memo(function SummaryLayer({ config }: { config: SummaryCon
 });
 
 const OverlayLayer = memo(function OverlayLayer({ config }: { config: OverlayConfig }) {
-  if (config.visible === false) return null;
+  if (config.visible === false || config._isActive === false) return null;
   const src = resolveRect(config.source);
   const scr = resolveRect(config.onScreen);
 
@@ -147,11 +148,13 @@ const OverlayLayer = memo(function OverlayLayer({ config }: { config: OverlayCon
       imageSource={resolveCiftreeAsset(resolveCiftreeKey(config.ovl, config.resolution))}
       src={src} scrW={rW(scr)} scrH={rH(scr)} left={scr.x1} top={scr.y1}
       zIndex={config.z ?? 0} resolution={config.resolution ?? 1}
+      opacity={config.localAlpha ?? 1}
     />
   );
 });
 
 const MovieLayer = memo(function MovieLayer({ config }: { config: MovieConfig }) {
+  if (config._isActive === false) return null;
   const videoRef = useRef<Video>(null);
   const src = resolveRect(config.source);
   const scr = resolveRect(config.onScreen);
@@ -176,8 +179,11 @@ const MovieLayer = memo(function MovieLayer({ config }: { config: MovieConfig })
         shouldPlay
         isMuted
         onPlaybackStatusUpdate={(status) => {
-          if (config.pauseOnLastFrame && status.isLoaded && status.didJustFinish) {
-            videoRef.current?.pauseAsync();
+          if (status.isLoaded && status.didJustFinish) {
+            if (config.pauseOnLastFrame) {
+              videoRef.current?.pauseAsync();
+            }
+            config._markDone?.();
           }
         }}
       />
@@ -186,6 +192,7 @@ const MovieLayer = memo(function MovieLayer({ config }: { config: MovieConfig })
 });
 
 const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig }) {
+  if (config._isActive === false) return null;
   const [hovered, setHovered] = useState(false);
   const [pressed, setPressed] = useState(false);
 
@@ -262,6 +269,17 @@ const ButtonLayer = memo(function ButtonLayer({ config }: { config: ButtonConfig
         }}
         onPressOut={() => {
           setPressed(false);
+          // Hotspot done + OnDone
+          const hs = config.hs as any;
+          if (hs && !hs.done) {
+            hs.done = true;
+            hs.OnDone?.(hs);
+          }
+          // Auto-navigate if hotspot.scene is set
+          if (hs?.scene) {
+            const { Scene } = require('./Scene');
+            Scene.Change(hs.scene);
+          }
           config.OnUp?.();
         }}
       />
@@ -291,6 +309,7 @@ export const SceneRenderer = memo(function SceneRenderer() {
       {sortedMovies.map((m) => <MovieLayer key={m.id} config={m} />)}
       {sortedOverlays.map((o) => <OverlayLayer key={o.id} config={o} />)}
       {sortedFillRects.map((f) => {
+        if (f._isActive === false) return null;
         const scr = resolveRect(f.onScreen);
         const style = {
           position: 'absolute' as const,
